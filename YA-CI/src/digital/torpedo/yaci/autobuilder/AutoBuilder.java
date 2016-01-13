@@ -19,15 +19,22 @@
  */
 package digital.torpedo.yaci.autobuilder;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.concurrent.PriorityBlockingQueue;
 
 import org.apache.maven.shared.invoker.DefaultInvocationRequest;
@@ -45,6 +52,7 @@ import org.apache.maven.shared.invoker.MavenInvocationException;
 public class AutoBuilder {
     private final PriorityBlockingQueue<String> buildQueue = new PriorityBlockingQueue<>(32, (a,b) -> 1);
     private final Map<String, FileProcesser> fileProcessers = new HashMap<>();
+    private final Invoker invoker = new DefaultInvoker();
     private Path tempFolder, buildFolder;
     private Thread worker;
     
@@ -54,19 +62,23 @@ public class AutoBuilder {
     public AutoBuilder() {
         this.tempFolder = Paths.get("temp/");
         this.buildFolder = Paths.get("build/");
-        this.worker = new Thread(this::queueThread, "AutoBuilder Worker");
-        this.worker.setDaemon(true);
-        this.worker.start();
+        this.invoker.setMavenHome(new File("C:\\maven\\"));
         
         fileProcessers.put("zip", new Unzipper());
         fileProcessers.put("git", new Gitter());
+        
+        this.worker = new Thread(this::queueThread, "AutoBuilder Worker");
+        this.worker.setDaemon(true);
+        this.worker.start();
     }
     
     private void queueThread() {
+        System.out.println("Queue Thread Started!");
         while(true) {
             try {
                 String p = buildQueue.take();
                 if(p == null) continue;
+                System.out.println("Processing: "+p);
                 Path output = extractMe(p);
                 if(output != null)
                     buildMe(output);
@@ -90,25 +102,91 @@ public class AutoBuilder {
         this.buildFolder = folder;
     }
     
+    /**
+     * Adds path/url to queue
+     * @param pathUrl path/url to add
+     */
+    public void queueFile(String pathUrl) {
+        if(pathUrl == null || pathUrl.isEmpty()) return;
+        buildQueue.add(pathUrl);
+    }
+    
     private Path extractMe(String output) {
         String suffix = getSuffix(output);
+        System.out.println("Suffix: "+suffix);
         if(fileProcessers.containsKey(suffix))
             return fileProcessers.get(suffix).processFile(output, tempFolder, stamp());
+        System.out.println("No Processer found for: "+suffix);
         return null;
     }
     
     private void buildMe(Path projectFolder) {
+        System.out.println("Building: "+projectFolder.toString());
         InvocationRequest req = new DefaultInvocationRequest();
         req.setPomFile(projectFolder.resolve("pom.xml").toFile());
         req.setGoals(Collections.singletonList("package"));
         
-        Invoker invoker = new DefaultInvoker();
+        
         try {
             InvocationResult res = invoker.execute(req);
             if(res.getExitCode() != 0) {
                 res.getExecutionException().printStackTrace();
+            } else {
+                moveJars(projectFolder);
+                cleanUp(projectFolder);
             }
         } catch (MavenInvocationException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Cleans Folder
+     * @param projectFolder
+     */
+    private void cleanUp(Path projectFolder) {
+        if(Files.isDirectory(projectFolder)) {
+            try(DirectoryStream<Path> strm = Files.newDirectoryStream(projectFolder)) {
+                strm.forEach(this::cleanUp);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        try {
+            Files.deleteIfExists(projectFolder);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void moveJars(Path inputFolder) {
+        Path target = inputFolder.resolve("target");
+        if(!Files.exists(target)) {
+            System.err.println("Maven Build Failed!");
+            return;
+        }
+        Path baseBuild = buildFolder.resolve(inputFolder.getFileName());
+        if (!Files.exists(baseBuild)) {
+            try {
+                Files.createDirectories(baseBuild);
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+        }
+        try(DirectoryStream<Path> jarStrm = Files.newDirectoryStream(target, "*.jar")) {
+            jarStrm.forEach(p -> move(p, baseBuild));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    private void move(Path file, Path base) {
+        try {
+            System.out.print("Moving file: "+file.getFileName().toString()+"... ");
+            Files.copy(file, base.resolve(file.getFileName()), StandardCopyOption.REPLACE_EXISTING);
+            System.out.print("Success!"+System.lineSeparator());
+        } catch (IOException e) {
+            System.out.print("Failed!"+System.lineSeparator());
             e.printStackTrace();
         }
     }
@@ -117,24 +195,22 @@ public class AutoBuilder {
         String name = p.getFileName().toString();
         int lastIndex = name.lastIndexOf('.');
         if(lastIndex == -1 || lastIndex == 0) return name;
-        return name.substring(0, lastIndex+1);
+        return name.substring(0, lastIndex);
     }
     
     private static String getSuffix(String s) {
         int lastIndex = s.lastIndexOf('.');
         if(lastIndex == -1 || lastIndex == 0) return "";
-        return s.substring(lastIndex);
+        return s.substring(lastIndex+1);
     }
     
     private static DateTimeFormatter formatter = new DateTimeFormatterBuilder().
                                                      appendValue(ChronoField.DAY_OF_MONTH,     2).
                                                      appendValue(ChronoField.MONTH_OF_YEAR,    2).
                                                      appendValue(ChronoField.YEAR).
-                                                     appendLiteral('_').
                                                      appendValue(ChronoField.HOUR_OF_DAY,      2).
                                                      appendValue(ChronoField.MINUTE_OF_HOUR,   2).
                                                      appendValue(ChronoField.SECOND_OF_MINUTE, 2).
-                                                     appendLiteral('_').
                                                      appendValue(ChronoField.MILLI_OF_SECOND,  3).
                                                      toFormatter();
     private static String stamp() {
@@ -147,7 +223,8 @@ public class AutoBuilder {
      */
     public static void main(String[] args) {
         AutoBuilder ap = new AutoBuilder();
-        
+        ap.queueFile("TextAdventure.zip");
+        new Scanner(System.in).nextLine(); //Stops from quiting before hand
     }
     
 }
