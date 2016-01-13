@@ -34,14 +34,13 @@ public class Gitter implements FileProcesser {
     
     @Override
     public Path processFile(String p, Path baseFolder, String stamp) {
+        Path folder = baseFolder.resolve(getGitName(p) + "_" + stamp);
         try {
-            Path folder = baseFolder.resolve(getGitName(p)+"_"+stamp);
-            try {
-                Files.createDirectories(folder);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            Git.cloneRepository().setURI(p).setDirectory(folder.toFile()).call();
+            Files.createDirectories(folder);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        try (Git repo = Git.cloneRepository().setURI(p).setDirectory(folder.toFile()).call()) {
             return folder;
         } catch (GitAPIException e) {
             e.printStackTrace();
