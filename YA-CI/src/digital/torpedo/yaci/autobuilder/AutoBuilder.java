@@ -130,7 +130,8 @@ public class AutoBuilder {
         try {
             InvocationResult res = invoker.execute(req);
             if(res.getExitCode() != 0) {
-                res.getExecutionException().printStackTrace();
+                if(res.getExecutionException() != null)
+                    res.getExecutionException().printStackTrace();
             } else {
                 moveJars(projectFolder);
                 cleanUp(projectFolder);
@@ -223,7 +224,8 @@ public class AutoBuilder {
      */
     public static void main(String[] args) {
         AutoBuilder ap = new AutoBuilder();
-        ap.queueFile("TextAdventure.zip");
+        //ap.queueFile("TextAdventure.zip");
+        ap.queueFile("https://taavistain@bitbucket.org/taavistain/tekstiseikkailu.git");
         new Scanner(System.in).nextLine(); //Stops from quiting before hand
     }
     
