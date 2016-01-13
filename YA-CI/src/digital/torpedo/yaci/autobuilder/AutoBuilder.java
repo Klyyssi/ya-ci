@@ -19,33 +19,111 @@
  */
 package digital.torpedo.yaci.autobuilder;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.PriorityBlockingQueue;
+
+import org.apache.maven.shared.invoker.DefaultInvocationRequest;
+import org.apache.maven.shared.invoker.DefaultInvoker;
+import org.apache.maven.shared.invoker.InvocationRequest;
+import org.apache.maven.shared.invoker.InvocationResult;
+import org.apache.maven.shared.invoker.Invoker;
+import org.apache.maven.shared.invoker.MavenInvocationException;
+
 
 /**
  * @author Tuomo Heino
  * @version 13.1.2016
  */
 public class AutoBuilder {
-    private static final Path buildQueue = Paths.get("build_queue"),
-                              buildFinal = Paths.get("build_final");
-    private static final int BUFFER_SIZE = 4096;
+    private final PriorityBlockingQueue<String> buildQueue = new PriorityBlockingQueue<>(32, (a,b) -> 1);
+    private final Map<String, FileProcesser> fileProcessers = new HashMap<>();
+    private Path tempFolder, buildFolder;
+    private Thread worker;
     
-    private static String removeSuffix(Path p) {
+    /**
+     * Builder
+     */
+    public AutoBuilder() {
+        this.tempFolder = Paths.get("temp/");
+        this.buildFolder = Paths.get("build/");
+        this.worker = new Thread(this::queueThread, "AutoBuilder Worker");
+        this.worker.setDaemon(true);
+        this.worker.start();
+        
+        fileProcessers.put("zip", new Unzipper());
+        fileProcessers.put("git", new Gitter());
+    }
+    
+    private void queueThread() {
+        while(true) {
+            try {
+                String p = buildQueue.take();
+                if(p == null) continue;
+                Path output = extractMe(p);
+                if(output != null)
+                    buildMe(output);
+            } catch(Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+    
+    /**
+     * @param folder folder to set unzip/git project bases
+     */
+    public void setTempFolder(Path folder) {
+        this.tempFolder = folder;
+    }
+    
+    /**
+     * @param folder folder to place builded jars
+     */
+    public void setBuildFolder(Path folder) {
+        this.buildFolder = folder;
+    }
+    
+    private Path extractMe(String output) {
+        String suffix = getSuffix(output);
+        if(fileProcessers.containsKey(suffix))
+            return fileProcessers.get(suffix).processFile(output, tempFolder, stamp());
+        return null;
+    }
+    
+    private void buildMe(Path projectFolder) {
+        InvocationRequest req = new DefaultInvocationRequest();
+        req.setPomFile(projectFolder.resolve("pom.xml").toFile());
+        req.setGoals(Collections.singletonList("package"));
+        
+        Invoker invoker = new DefaultInvoker();
+        try {
+            InvocationResult res = invoker.execute(req);
+            if(res.getExitCode() != 0) {
+                res.getExecutionException().printStackTrace();
+            }
+        } catch (MavenInvocationException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    static String removeSuffix(Path p) {
         String name = p.getFileName().toString();
         int lastIndex = name.lastIndexOf('.');
         if(lastIndex == -1 || lastIndex == 0) return name;
-        return name.substring(0, lastIndex);
+        return name.substring(0, lastIndex+1);
+    }
+    
+    private static String getSuffix(String s) {
+        int lastIndex = s.lastIndexOf('.');
+        if(lastIndex == -1 || lastIndex == 0) return "";
+        return s.substring(lastIndex);
     }
     
     private static DateTimeFormatter formatter = new DateTimeFormatterBuilder().
@@ -65,60 +143,11 @@ public class AutoBuilder {
     } 
     
     /**
-     * @param p path to zip
-     */
-    public void submitZipFile(Path p) {
-        Path current = buildQueue.resolve(removeSuffix(p)+"_"+stamp()+"/");
-        
-        try(ZipInputStream zis = new ZipInputStream(new FileInputStream(p.toFile()))) {
-            Files.createDirectories(current);
-            
-            byte[] buffer = new byte[BUFFER_SIZE];
-            
-            ZipEntry ze = zis.getNextEntry();
-            while(ze != null) {
-                String fileName = ze.getName();
-                
-                System.out.println("Unzipping: "+fileName);
-                
-                Path file = current.resolve(fileName);
-                
-                if(ze.isDirectory()) {
-                    Files.createDirectories(file);
-                } else {
-                    if(!Files.exists(file.getParent()))
-                        Files.createDirectories(file.getParent());
-                    
-                    try (FileOutputStream out = new FileOutputStream(file.toFile())) {
-                        int len;
-                        while ((len = zis.read(buffer)) > 0) {
-                            out.write(buffer, 0, len);
-                        }
-                    }
-                }
-                
-                ze = zis.getNextEntry();
-            }
-            zis.closeEntry();
-            System.out.println("Succesfully unzipped: "+p.getFileName().toString()+" to "+current.getFileName().toString());
-        } catch(IOException ex){
-            ex.printStackTrace(); 
-        }
-    }
-    
-    private static void createBase() {
-        try {
-            Files.createDirectories(buildQueue);
-            Files.createDirectories(buildFinal);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-    
-    /**
      * @param args arguments
      */
     public static void main(String[] args) {
-        createBase();
+        AutoBuilder ap = new AutoBuilder();
+        
     }
+    
 }
