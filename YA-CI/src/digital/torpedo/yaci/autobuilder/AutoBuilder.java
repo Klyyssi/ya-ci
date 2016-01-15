@@ -19,6 +19,7 @@
  */
 package digital.torpedo.yaci.autobuilder;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -30,9 +31,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -44,12 +46,17 @@ import org.apache.maven.shared.invoker.InvocationResult;
 import org.apache.maven.shared.invoker.Invoker;
 import org.apache.maven.shared.invoker.MavenInvocationException;
 
+import com.google.gson.Gson;
+
+import digital.torpedo.yaci.autobuilder.YACIConfig.YACIConfigBlock;
+
 
 /**
  * @author Tuomo Heino
  * @version 13.1.2016
  */
 public class AutoBuilder {
+    private final Gson gson = new Gson();
     private final PriorityBlockingQueue<String> buildQueue = new PriorityBlockingQueue<>(32, (a,b) -> 1);
     private final Map<String, FileProcesser> fileProcessers = new HashMap<>();
     private final Invoker invoker = new DefaultInvoker();
@@ -79,9 +86,13 @@ public class AutoBuilder {
                 String p = buildQueue.take();
                 if(p == null) continue;
                 System.out.println("Processing: "+p);
-                Path output = extractMe(p);
-                if(output != null)
-                    buildMe(output);
+                Path projectBase = extractMe(p); 
+                Path[] outputs = resolveConfFiles(projectBase);
+                if(outputs != null) {
+                    for(Path output : outputs)
+                        buildMe(output);
+                }
+                cleanUp(projectBase);
             } catch(Exception ex) {
                 ex.printStackTrace();
             }
@@ -120,6 +131,34 @@ public class AutoBuilder {
         return null;
     }
     
+    private Path[] resolveConfFiles(Path projectFolder) {
+        if(projectFolder == null) return null;
+        Path cfg = projectFolder.resolve(YACIConfig.YACI_CONFIG_NAME);
+        if(Files.exists(cfg)) return new Path[] {projectFolder};
+        try(BufferedReader in = Files.newBufferedReader(cfg)) {
+            YACIConfig config = gson.fromJson(in, YACIConfig.class);
+            if(config != null && config.isValid()) {
+                List<Path> paths = new ArrayList<>();
+                for(YACIConfigBlock b : config) {
+                    Path p = projectFolder.resolve(b.getFolder());
+                    if(hasPom(p))
+                        paths.add(p);
+                }
+                if(paths.size() == 0) return null;
+                return paths.toArray(new Path[] {});
+            }
+            if(hasPom(projectFolder))
+                return new Path[] {projectFolder};
+        } catch(Exception ex) {
+            ex.printStackTrace();
+        }
+        return null;
+    }
+    
+    private boolean hasPom(Path folder) {
+        return Files.exists(folder.resolve("pom.xml"));
+    }
+    
     private void buildMe(Path projectFolder) {
         System.out.println("Building: "+projectFolder.toString());
         InvocationRequest req = new DefaultInvocationRequest();
@@ -134,7 +173,6 @@ public class AutoBuilder {
                     res.getExecutionException().printStackTrace();
             } else {
                 moveJars(projectFolder);
-                cleanUp(projectFolder);
             }
         } catch (MavenInvocationException e) {
             e.printStackTrace();
