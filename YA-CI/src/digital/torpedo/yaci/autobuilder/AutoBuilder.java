@@ -92,7 +92,8 @@ public class AutoBuilder {
                     for(Path output : outputs)
                         buildMe(output);
                 }
-                cleanUp(projectBase);
+                if(projectBase != null)
+                    cleanUp(projectBase);
             } catch(Exception ex) {
                 ex.printStackTrace();
             }
