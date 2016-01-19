@@ -20,16 +20,16 @@
 package digital.torpedo.yaci.webserver;
 
 import digital.torpedo.yaci.autobuilder.AutoBuilder;
-import digital.torpedo.yaci.autobuilder.Gitter;
 import digital.torpedo.yaci.autobuilder.YACISourceType;
 import digital.torpedo.yaci.autobuilder.YACITask;
 
 import fi.iki.elonen.NanoHTTPD;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Map;
-import java.io.File;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collector;
 
 /**
  *
@@ -37,12 +37,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class WebServer extends NanoHTTPD {
     
-    private AtomicInteger runningNumber = new AtomicInteger();
+    private final AutoBuilder builder = AutoBuilder.getInstance(MAVEN_PATH, TEMP_PATH, BUILD_PATH);
     
     /** FOR TEST PURPOSES ONLY */
-    private static final String LOCAL_REPO_PATH_ROOT = "/home/markus/testi";
     private static final String TEMP_PATH = "/home/markus/testi/temp";
     private static final String BUILD_PATH = "/home/markus/testi/build";
+    private static final String MAVEN_PATH = "/usr/share/maven";
     /** */
 
     public WebServer(int port) throws IOException {
@@ -58,12 +58,35 @@ public class WebServer extends NanoHTTPD {
         if (parms.get("git") == null) {
             msg += "<form action='?' id='formGit' method='get'>\n  <p>Git URL: <input type='text' name='git'></p>\n" + "</form>\n"
                     + "<button type='submit' form='formGit'>Build</button>\n";
+            try {
+                msg += createBuildTable();
+            } catch (IOException ex) {
+                System.err.println("Couldn't create build table " + ex);
+            }
         } else {
             String gitParam = parms.get("git");
-            msg += "<p>Cloned and built " + gitParam + " [master]!</p>";
-            AutoBuilder builder = AutoBuilder.getInstance("/usr/share/maven", TEMP_PATH, BUILD_PATH);
             builder.queueTask(new YACITask.YACITaskBuilder(gitParam, YACISourceType.GIT).build());
+            msg += "<p>Project is being built from " + gitParam + " [master]...</p>\n<a href='/'>Go back</a>";            
         }
         return newFixedLengthResponse(msg + "</body></html>\n");
+    }
+    
+    private String createBuildTable() throws IOException {
+        final StringBuilder s = new StringBuilder("<h2>Builds</h2><table>");
+        
+        s.append(Files.find(Paths.get(BUILD_PATH), 6, (path, attributes) -> attributes.isDirectory())
+                .filter(x -> !x.endsWith(Paths.get(BUILD_PATH)))
+                .collect(Collector.of(
+                        StringBuilder::new, 
+                        (sb, x) -> sb
+                            .append("<tr><td>")
+                            .append(x.getFileName().toString())
+                            .append("</td><td><a href='")
+                            .append(x.toUri().toString())
+                            .append("'>Download</a></td></tr>"),
+                        StringBuilder::append,
+                        StringBuilder::toString)));
+                
+        return s.append("</table>").toString();
     }
 }
