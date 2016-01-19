@@ -20,7 +20,7 @@
 package digital.torpedo.yaci.autobuilder;
 
 import java.util.Iterator;
-import java.util.Set;
+import java.util.List;
 import java.util.function.Consumer;
 
 import digital.torpedo.yaci.autobuilder.YACIConfig.YACIConfigBlock;
@@ -33,7 +33,7 @@ public class YACIConfig implements Iterable<YACIConfigBlock> {
     /** Config File Name */
     public static final String YACI_CONFIG_NAME = "yaci.json";
     
-    private final Set<YACIConfigBlock> blocks;
+    private final List<YACIConfigBlock> projects;
     
     
     /**
@@ -41,24 +41,24 @@ public class YACIConfig implements Iterable<YACIConfigBlock> {
      * Not usable as is.
      */
     public YACIConfig() {
-        blocks = null;
+        projects = null;
     }
     
     @Override
     public void forEach(Consumer<? super YACIConfigBlock> action) {
-        blocks.forEach(action);
+        projects.forEach(action);
     }
 
     @Override
     public Iterator<YACIConfigBlock> iterator() {
-        return blocks.iterator();
+        return projects.iterator();
     }
     
     /**
      * @return block amount
      */
     public int size() {
-        return blocks.size();
+        return projects.size();
     }
     
     /**
@@ -66,7 +66,7 @@ public class YACIConfig implements Iterable<YACIConfigBlock> {
      * @return if is valid config
      */
     public boolean isValid() {
-        return blocks != null && blocks.size() > 0;
+        return projects != null && projects.size() > 0;
     }
     
     /**

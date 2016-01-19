@@ -27,21 +27,21 @@ package digital.torpedo.yaci.autobuilder;
  * @author Tuomo Heino
  * @version 19.1.2016
  */
-public interface AutoBuilder {
+public class YACITaskException extends Exception {
+    
     /**
-     * Intantiates new Instance of AutoBuilder using default implementation
-     * @param mavenPath path to maven folder
-     * @param tempFolder temporary files folder
-     * @param buildFolder build folder for builded jar files
-     * @return AutoBuilder instance
+     * YACITaskException
      */
-    public static AutoBuilder getInstance(String mavenPath, String tempFolder, String buildFolder) {
-        return new AutoBuilderImpl(mavenPath, tempFolder, buildFolder);
+    public YACITaskException() {
+        super();
     }
     
     /**
-     * Adds YACITask to queue
-     * @param task task to add
+     * @param msg message to throw
      */
-    public void queueTask(YACITask task);
+    public YACITaskException(String msg) {
+        super(msg);
+    }
+
+    private static final long serialVersionUID = -7484764165969867192L;
 }

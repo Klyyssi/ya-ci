@@ -27,21 +27,17 @@ package digital.torpedo.yaci.autobuilder;
  * @author Tuomo Heino
  * @version 19.1.2016
  */
-public interface AutoBuilder {
-    /**
-     * Intantiates new Instance of AutoBuilder using default implementation
-     * @param mavenPath path to maven folder
-     * @param tempFolder temporary files folder
-     * @param buildFolder build folder for builded jar files
-     * @return AutoBuilder instance
-     */
-    public static AutoBuilder getInstance(String mavenPath, String tempFolder, String buildFolder) {
-        return new AutoBuilderImpl(mavenPath, tempFolder, buildFolder);
-    }
+public enum YACISourceType {
+    /** Zip Container, uses Local Path */
+    ZIP(new Unzipper()),
+    /** Zip over HTTP */
+    HTTP_ZIP(null),
+    /** Git from remote */
+    GIT(new Gitter());
     
-    /**
-     * Adds YACITask to queue
-     * @param task task to add
-     */
-    public void queueTask(YACITask task);
+    final FileProcesser processer;
+    
+    private YACISourceType(FileProcesser processer) {
+        this.processer = processer;
+    }
 }

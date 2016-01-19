@@ -38,7 +38,7 @@ public class Unzipper implements FileProcesser {
     @Override
     public Path processFile(String p, Path baseFolder, String stamp) {
         Path file = Paths.get(p);
-        Path current = baseFolder.resolve(AutoBuilder.removeSuffix(file)+"_"+stamp+"/");
+        Path current = baseFolder.resolve(AutoBuilderImpl.removeSuffix(file)+"_"+stamp+"/");
         
         try(ZipInputStream zis = new ZipInputStream(new FileInputStream(file.toFile()))) {
             Files.createDirectories(current);

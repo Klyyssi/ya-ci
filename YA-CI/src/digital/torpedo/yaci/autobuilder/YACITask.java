@@ -24,24 +24,49 @@
 package digital.torpedo.yaci.autobuilder;
 
 /**
+ * QueueFile, Comparing always results 0
  * @author Tuomo Heino
  * @version 19.1.2016
  */
-public interface AutoBuilder {
-    /**
-     * Intantiates new Instance of AutoBuilder using default implementation
-     * @param mavenPath path to maven folder
-     * @param tempFolder temporary files folder
-     * @param buildFolder build folder for builded jar files
-     * @return AutoBuilder instance
-     */
-    public static AutoBuilder getInstance(String mavenPath, String tempFolder, String buildFolder) {
-        return new AutoBuilderImpl(mavenPath, tempFolder, buildFolder);
+public class YACITask implements Comparable<YACITask> {
+    final String source;
+    final YACISourceType srcType;
+    
+    YACITask(String source, YACISourceType srcType) {
+        this.source = source; this.srcType = srcType;
     }
     
+    @Override
+    public int compareTo(YACITask o) {
+        return 0;
+    }
+    
+    
     /**
-     * Adds YACITask to queue
-     * @param task task to add
+     * @author Tuomo Heino
+     * @version 19.1.2016
      */
-    public void queueTask(YACITask task);
+    public static class YACITaskBuilder {
+        private String source;
+        private YACISourceType srcType;
+        
+        /**
+         * @param source source
+         * @param srcType source type
+         */
+        public YACITaskBuilder(String source, YACISourceType srcType) {
+            this.source = source; this.srcType = srcType;
+        }
+        
+        /**
+         * @return builds YACITask
+         */
+        public YACITask build() {
+            /*
+            if(source == null) throw new YACITaskException("Source cannot be NULL!");
+            if(srcType == null) throw new YACITaskException("Source Type cannot be NULL!");
+            */
+            return new YACITask(source, srcType);
+        }
+    }
 }
