@@ -74,7 +74,7 @@ public class WebServer extends NanoHTTPD {
     private String createBuildTable() throws IOException {
         final StringBuilder s = new StringBuilder("<h2>Builds</h2><table>");
         
-        s.append(Files.find(Paths.get(BUILD_PATH), 6, (path, attributes) -> attributes.isDirectory())
+        s.append(Files.find(Paths.get(BUILD_PATH), 1, (path, attributes) -> attributes.isDirectory())
                 .filter(x -> !x.endsWith(Paths.get(BUILD_PATH)))
                 .collect(Collector.of(
                         StringBuilder::new, 
