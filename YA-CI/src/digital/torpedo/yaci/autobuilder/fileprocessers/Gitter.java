@@ -17,7 +17,7 @@
  *  along with this program; if not, you can access it online at
  *  http://www.gnu.org/licenses/gpl-2.0.html.
  */
-package digital.torpedo.yaci.autobuilder;
+package digital.torpedo.yaci.autobuilder.fileprocessers;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,6 +25,8 @@ import java.nio.file.Path;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
+
+import digital.torpedo.yaci.autobuilder.FileProcesser;
 
 /**
  * @author Tuomo Heino

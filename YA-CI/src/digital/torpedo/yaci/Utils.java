@@ -1,5 +1,5 @@
 /**
- *  YACI Source Types
+ *  Utils class for static methods
  *  
  *  Copyright (C) 2016  Tuomo Heino, Markus Mulkahainen
  *
@@ -17,26 +17,34 @@
  *  along with this program; if not, you can access it online at
  *  http://www.gnu.org/licenses/gpl-2.0.html.
  */
-package digital.torpedo.yaci.autobuilder;
+package digital.torpedo.yaci;
 
-import digital.torpedo.yaci.autobuilder.fileprocessers.Gitter;
-import digital.torpedo.yaci.autobuilder.fileprocessers.Unzipper;
+import java.nio.file.Path;
 
 /**
+ * Utils class for static methods
  * @author Tuomo Heino
- * @version 19.1.2016
+ * @version 22.1.2016
  */
-public enum YACISourceType {
-    /** Zip Container, uses Local Path */
-    ZIP(new Unzipper()),
-    /** Zip over HTTP */
-    HTTP_ZIP(null),
-    /** Git from remote */
-    GIT(new Gitter());
+public class Utils {
     
-    final FileProcesser processer;
+    /**
+     * Removes Suffix from given paths filename and returns it
+     * @param p path
+     * @return paths filename with no suffix
+     */
+    public static String removeSuffix(Path p) {
+        return removeSuffix(p.getFileName().toString());
+    }
     
-    private YACISourceType(FileProcesser processer) {
-        this.processer = processer;
+    /**
+     * Removes Suffix from given path and returns it
+     * @param p path
+     * @return path with no suffix
+     */
+    public static String removeSuffix(String name) {
+        int lastIndex = name.lastIndexOf('.');
+        if(lastIndex == -1 || lastIndex == 0) return name;
+        return name.substring(0, lastIndex);
     }
 }

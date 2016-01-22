@@ -244,13 +244,6 @@ class AutoBuilderImpl implements AutoBuilder {
         }
     }
     
-    static String removeSuffix(Path p) {
-        String name = p.getFileName().toString();
-        int lastIndex = name.lastIndexOf('.');
-        if(lastIndex == -1 || lastIndex == 0) return name;
-        return name.substring(0, lastIndex);
-    }
-    
     private static DateTimeFormatter formatter = new DateTimeFormatterBuilder().
                                                      appendValue(ChronoField.DAY_OF_MONTH,     2).
                                                      appendValue(ChronoField.MONTH_OF_YEAR,    2).
