@@ -27,6 +27,7 @@ import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 
 import digital.torpedo.yaci.autobuilder.FileProcesser;
+import digital.torpedo.yaci.autobuilder.YACITask.YACITaskConf;
 
 /**
  * @author Tuomo Heino
@@ -35,7 +36,7 @@ import digital.torpedo.yaci.autobuilder.FileProcesser;
 public class Gitter implements FileProcesser {
     
     @Override
-    public Path processFile(String p, Path baseFolder, String stamp) {
+    public Path processFile(String p, Path baseFolder, String stamp, YACITaskConf config) {
         Path folder = baseFolder.resolve(getGitName(p) + "_" + stamp);
         try {
             Files.createDirectories(folder);
@@ -43,6 +44,9 @@ public class Gitter implements FileProcesser {
             e.printStackTrace();
         }
         try (Git repo = Git.cloneRepository().setURI(p).setDirectory(folder.toFile()).call()) {
+            if(config.gitBranch != null) {
+                repo.checkout().setName(config.gitBranch).call();
+            }
             return folder;
         } catch (GitAPIException e) {
             e.printStackTrace();

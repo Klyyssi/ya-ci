@@ -30,6 +30,7 @@ import java.util.zip.ZipInputStream;
 
 import digital.torpedo.yaci.Utils;
 import digital.torpedo.yaci.autobuilder.FileProcesser;
+import digital.torpedo.yaci.autobuilder.YACITask.YACITaskConf;
 
 /**
  * @author Tuomo Heino
@@ -39,7 +40,7 @@ public class Unzipper implements FileProcesser {
     private static final int BUFFER_SIZE = 4096;
     
     @Override
-    public Path processFile(String p, Path baseFolder, String stamp) {
+    public Path processFile(String p, Path baseFolder, String stamp, YACITaskConf config) {
         return unzip(p, baseFolder, stamp);
     }
     

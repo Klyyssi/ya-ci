@@ -27,6 +27,7 @@ import java.nio.file.Path;
 
 import digital.torpedo.yaci.Utils;
 import digital.torpedo.yaci.autobuilder.FileProcesser;
+import digital.torpedo.yaci.autobuilder.YACITask.YACITaskConf;
 
 /**
  * @author Tuomo Heino
@@ -37,7 +38,7 @@ public class UnzipperHttp implements FileProcesser {
     
     
     @Override
-    public Path processFile(String p, Path baseFolder, String stamp) {
+    public Path processFile(String p, Path baseFolder, String stamp, YACITaskConf config) {
         try {
             URL url = new URL(p);
             HttpURLConnection con = (HttpURLConnection) url.openConnection();

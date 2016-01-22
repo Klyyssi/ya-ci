@@ -21,6 +21,8 @@ package digital.torpedo.yaci.autobuilder;
 
 import java.nio.file.Path;
 
+import digital.torpedo.yaci.autobuilder.YACITask.YACITaskConf;
+
 /**
  * @author Tuomo Heino
  * @version 13.1.2016
@@ -28,10 +30,11 @@ import java.nio.file.Path;
 public interface FileProcesser {
     /**
      * Processes given path
-     * @param p path/url
+     * @param p path/url for file or git project
      * @param baseFolder folder to output base
-     * @param stamp stamp to use
-     * @return output folder
+     * @param stamp timestamp to use when creating output folder, must have this!
+     * @param config config file to for extra options, may contain null/empty values. Config is never null itself
+     * @return output folder, aka baseFolder resolved with folder that has stamp attached to
      */
-    public Path processFile(String p, Path baseFolder, String stamp);
+    public Path processFile(String p, Path baseFolder, String stamp, YACITaskConf config);
 }
