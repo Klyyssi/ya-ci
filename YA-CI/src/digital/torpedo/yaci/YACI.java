@@ -21,6 +21,7 @@ package digital.torpedo.yaci;
 
 import digital.torpedo.yaci.webserver.WebServer;
 import java.io.IOException;
+import java.util.Optional;
 
 /**
  * @author Tuomo Heino
@@ -29,7 +30,7 @@ import java.io.IOException;
  */
 public class YACI {
     /** YA-CI Main Version */
-    public static final String VERSION = "v0.0.1";
+    public static final String VERSION = "v0.0.2";
     
     /** YA-CI web server port */
     public static final int WEB_SERVER_PORT = 8080;
@@ -38,6 +39,15 @@ public class YACI {
      * @param args arguments
      */
     public static void main(String[] args) {
+    	Optional<Exception> result = Optional.ofNullable(Config.getConfig().validate());
+    	
+    	result.ifPresent(Exception::printStackTrace);
+    	
+    	if(!result.isPresent())
+    		run();
+    }
+    
+    private static void run() {
         System.out.println("#================================================#");
         System.out.println("#=============Starting YA-CI "+VERSION+"!=============#");
         System.out.println("#                                                #");
@@ -49,5 +59,4 @@ public class YACI {
             System.err.println("Couldn't start server: \n" +ex);
         }
     }
-
 }

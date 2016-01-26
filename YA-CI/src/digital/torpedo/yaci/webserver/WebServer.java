@@ -19,6 +19,7 @@
  */
 package digital.torpedo.yaci.webserver;
 
+import digital.torpedo.yaci.Config;
 import digital.torpedo.yaci.autobuilder.AutoBuilder;
 import digital.torpedo.yaci.autobuilder.YACISourceType;
 import digital.torpedo.yaci.autobuilder.YACITask;
@@ -36,13 +37,11 @@ import java.text.SimpleDateFormat;
  * @author Markus Mulkahainen
  */
 public class WebServer extends AbstractServer {
+    private static final String TEMP_PATH  = Config.getConfig().getTempPath();
+    private static final String BUILD_PATH = Config.getConfig().getBuildPath();
+    private static final String MAVEN_PATH = Config.getConfig().getMavenPath();
     
     private final AutoBuilder builder = AutoBuilder.getInstance(MAVEN_PATH, TEMP_PATH, BUILD_PATH);
-    
-    /** FOR TEST PURPOSES ONLY */
-    private static final String TEMP_PATH = "/home/markus/testi/temp";
-    private static final String BUILD_PATH = "/home/markus/testi/build";
-    private static final String MAVEN_PATH = "/usr/share/maven";
     /** */
 
     public WebServer(int port) throws IOException {

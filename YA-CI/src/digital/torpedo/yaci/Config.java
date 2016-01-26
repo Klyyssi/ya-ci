@@ -26,10 +26,9 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 
 import java.nio.file.StandardOpenOption;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
-
 
 /**
  * Easily Modifiable Configuration File for YACI Webserver
@@ -52,7 +51,7 @@ public class Config {
             Path p = Paths.get(CFG_PATH);
             if(Files.exists(p)) {
                 try(BufferedReader in = Files.newBufferedReader(p)) {
-                    instance = gson.fromJson(in, Config.class);
+                    instance = GSON.fromJson(in, Config.class);
                     if(instance == null)
                         createInstance();
                 } catch(IOException ex) {
@@ -74,7 +73,7 @@ public class Config {
     /**
      * Reset Current Config Instance and Forces it to reload itself
      */
-    public static Config reset() {
+    public static void reset() {
         instance = null;
     }
 
@@ -87,7 +86,7 @@ public class Config {
      */
     public void save() {
         try(BufferedWriter out = Files.newBufferedWriter(Paths.get(CFG_PATH), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
-            gson.toJson(this, out);
+            GSON.toJson(this, out);
         }catch(IOException ex) {
             ex.printStackTrace();
         }
@@ -100,8 +99,14 @@ public class Config {
      private String tempPath  = "temp/",
                     buildPath = "build/",
                     mavenPath = "maven/";
-
-
+     
+     /*
+      * Validator Below
+      */
+     public Exception validate() {
+    	 return null;
+     }
+     
      /*
       * Getters And Setters Below!
       */
