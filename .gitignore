@@ -1,6 +1,7 @@
 temp/
 build/
 *.zip
+config.json
 
 *.class
 
