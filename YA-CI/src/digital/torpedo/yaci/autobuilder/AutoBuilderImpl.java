@@ -92,7 +92,7 @@ class AutoBuilderImpl implements AutoBuilder {
                 YACITask task = buildQueue.take();
                 if(task == null) continue;
                 System.out.println("Processing: "+task);
-                Path projectBase = task.srcType.processer.processFile(task.source, tempFolder, stamp()); 
+                Path projectBase = task.srcType.processer.processFile(task.source, tempFolder, stamp(), task.conf); 
                 Path[] outputs = resolveConfFiles(projectBase);
                 if(outputs != null) {
                     for(Path output : outputs)
@@ -244,13 +244,6 @@ class AutoBuilderImpl implements AutoBuilder {
         }
     }
     
-    static String removeSuffix(Path p) {
-        String name = p.getFileName().toString();
-        int lastIndex = name.lastIndexOf('.');
-        if(lastIndex == -1 || lastIndex == 0) return name;
-        return name.substring(0, lastIndex);
-    }
-    
     private static DateTimeFormatter formatter = new DateTimeFormatterBuilder().
                                                      appendValue(ChronoField.DAY_OF_MONTH,     2).
                                                      appendValue(ChronoField.MONTH_OF_YEAR,    2).
@@ -271,7 +264,7 @@ class AutoBuilderImpl implements AutoBuilder {
     public static void main(String[] args) {
         AutoBuilder bldr = AutoBuilder.getInstance("C:\\maven\\", "temp/", "build/");
         //bldr.queueTask(new YACITask.YACITaskBuilder("TextAdventure.zip", YACISourceType.ZIP).build());
-        bldr.queueTask(new YACITask("https://taavistain@bitbucket.org/taavistain/tekstiseikkailu.git", YACISourceType.GIT));
+        bldr.queueTask(new YACITask.YACITaskBuilder("https://taavistain@bitbucket.org/taavistain/tekstiseikkailu.git", YACISourceType.GIT).build());
         try(Scanner sc = new Scanner(System.in)) {
             sc.nextLine();
         }

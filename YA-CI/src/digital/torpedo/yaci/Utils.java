@@ -1,5 +1,5 @@
 /**
- *  FileProcessing interface
+ *  Utils class for static methods
  *  
  *  Copyright (C) 2016  Tuomo Heino, Markus Mulkahainen
  *
@@ -17,24 +17,34 @@
  *  along with this program; if not, you can access it online at
  *  http://www.gnu.org/licenses/gpl-2.0.html.
  */
-package digital.torpedo.yaci.autobuilder;
+package digital.torpedo.yaci;
 
 import java.nio.file.Path;
 
-import digital.torpedo.yaci.autobuilder.YACITask.YACITaskConf;
-
 /**
+ * Utils class for static methods
  * @author Tuomo Heino
- * @version 13.1.2016
+ * @version 22.1.2016
  */
-public interface FileProcesser {
+public class Utils {
+    
     /**
-     * Processes given path
-     * @param p path/url for file or git project
-     * @param baseFolder folder to output base
-     * @param stamp timestamp to use when creating output folder, must have this!
-     * @param config config file to for extra options, may contain null/empty values. Config is never null itself
-     * @return output folder, aka baseFolder resolved with folder that has stamp attached to
+     * Removes Suffix from given paths filename and returns it
+     * @param p path
+     * @return paths filename with no suffix
      */
-    public Path processFile(String p, Path baseFolder, String stamp, YACITaskConf config);
+    public static String removeSuffix(Path p) {
+        return removeSuffix(p.getFileName().toString());
+    }
+    
+    /**
+     * Removes Suffix from given path and returns it
+     * @param p path
+     * @return path with no suffix
+     */
+    public static String removeSuffix(String name) {
+        int lastIndex = name.lastIndexOf('.');
+        if(lastIndex == -1 || lastIndex == 0) return name;
+        return name.substring(0, lastIndex);
+    }
 }

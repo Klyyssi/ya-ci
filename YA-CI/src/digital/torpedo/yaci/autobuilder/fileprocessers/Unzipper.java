@@ -17,7 +17,7 @@
  *  along with this program; if not, you can access it online at
  *  http://www.gnu.org/licenses/gpl-2.0.html.
  */
-package digital.torpedo.yaci.autobuilder;
+package digital.torpedo.yaci.autobuilder.fileprocessers;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -28,6 +28,10 @@ import java.nio.file.Paths;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import digital.torpedo.yaci.Utils;
+import digital.torpedo.yaci.autobuilder.FileProcesser;
+import digital.torpedo.yaci.autobuilder.YACITask.YACITaskConf;
+
 /**
  * @author Tuomo Heino
  * @version 13.1.2016
@@ -36,9 +40,13 @@ public class Unzipper implements FileProcesser {
     private static final int BUFFER_SIZE = 4096;
     
     @Override
-    public Path processFile(String p, Path baseFolder, String stamp) {
+    public Path processFile(String p, Path baseFolder, String stamp, YACITaskConf config) {
+        return unzip(p, baseFolder, stamp);
+    }
+    
+    static Path unzip(String p, Path baseFolder, String stamp) {
         Path file = Paths.get(p);
-        Path current = baseFolder.resolve(AutoBuilderImpl.removeSuffix(file)+"_"+stamp+"/");
+        Path current = baseFolder.resolve(Utils.removeSuffix(file)+"_"+stamp+"/");
         
         try(ZipInputStream zis = new ZipInputStream(new FileInputStream(file.toFile()))) {
             Files.createDirectories(current);

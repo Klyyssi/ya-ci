@@ -19,6 +19,9 @@
  */
 package digital.torpedo.yaci.autobuilder;
 
+import digital.torpedo.yaci.autobuilder.fileprocessers.Gitter;
+import digital.torpedo.yaci.autobuilder.fileprocessers.Unzipper;
+
 /**
  * @author Tuomo Heino
  * @version 19.1.2016

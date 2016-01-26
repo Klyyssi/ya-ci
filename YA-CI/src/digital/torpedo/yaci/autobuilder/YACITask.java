@@ -27,14 +27,30 @@ package digital.torpedo.yaci.autobuilder;
 public class YACITask implements Comparable<YACITask> {
     final String source;
     final YACISourceType srcType;
+    final YACITaskConf conf;
     
-    YACITask(String source, YACISourceType srcType) {
+    YACITask(String source, YACISourceType srcType, String gitBranch) {
         this.source = source; this.srcType = srcType;
+        this.conf = new YACITaskConf(gitBranch);
     }
     
     @Override
     public int compareTo(YACITask o) {
         return 0;
+    }
+    
+    /**
+     * Class to hold public properties which are given to FileProcessers
+     * @author Tuomo Heino
+     * @version 22.1.2016
+     */
+    public static class YACITaskConf {
+        /** Git Branch to use */
+        public final String gitBranch;
+        
+        YACITaskConf(String gitBranch) {
+            this.gitBranch = gitBranch;
+        }
     }
     
     
@@ -45,6 +61,7 @@ public class YACITask implements Comparable<YACITask> {
     public static class YACITaskBuilder {
         private String source;
         private YACISourceType srcType;
+        private String gitBranch;
         
         /**
          * @param source source
@@ -55,6 +72,16 @@ public class YACITask implements Comparable<YACITask> {
         }
         
         /**
+         * Sets Git Branch
+         * @param gitBranch git branch
+         * @return this builder for chaining
+         */
+        public YACITaskBuilder gitBranch(String gitBranch) {
+            this.gitBranch = gitBranch;
+            return this;
+        }
+        
+        /**
          * @return builds YACITask
          */
         public YACITask build() {
@@ -62,7 +89,7 @@ public class YACITask implements Comparable<YACITask> {
             if(source == null) throw new YACITaskException("Source cannot be NULL!");
             if(srcType == null) throw new YACITaskException("Source Type cannot be NULL!");
             */
-            return new YACITask(source, srcType);
+            return new YACITask(source, srcType, gitBranch);
         }
     }
 }
