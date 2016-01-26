@@ -23,6 +23,7 @@ import com.google.gson.Gson;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import java.nio.file.StandardOpenOption;
@@ -104,6 +105,10 @@ public class Config {
       * Validator Below
       */
      public Exception validate() {
+         if(tempPath  == null) return new NullPointerException("Temp Path Null!");
+         if(buildPath == null) return new NullPointerException("Build Path Null!");
+         if(mavenPath == null) return new NullPointerException("Maven Path Null!");
+         if(Files.exists(Paths.get(mavenPath))) return new FileNotFoundException("Temp Path Doesn't Exist!");
     	 return null;
      }
      
