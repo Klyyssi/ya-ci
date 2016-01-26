@@ -19,13 +19,20 @@
  */
 package digital.torpedo.yaci;
 
+import digital.torpedo.yaci.webserver.WebServer;
+import java.io.IOException;
+
 /**
  * @author Tuomo Heino
+ * @author Markus Mulkahainen
  * @version 13.1.2016
  */
 public class YACI {
     /** YA-CI Main Version */
     public static final String VERSION = "v0.0.1";
+    
+    /** YA-CI web server port */
+    public static final int WEB_SERVER_PORT = 8080;
     
     /**
      * @param args arguments
@@ -33,7 +40,14 @@ public class YACI {
     public static void main(String[] args) {
         System.out.println("#================================================#");
         System.out.println("#=============Starting YA-CI "+VERSION+"!=============#");
-        System.out.println("#================================================#");
+        System.out.println("#                                                #");
+        try {
+            WebServer webServer = new WebServer(WEB_SERVER_PORT);
+            System.out.println("#==NanoHTTPD Web server listening to port "+webServer.getListeningPort()+"!==#");
+            System.out.println("#================================================#");
+        } catch (IOException ex) {
+            System.err.println("Couldn't start server: \n" +ex);
+        }
     }
 
 }
