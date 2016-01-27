@@ -108,8 +108,8 @@ public class Config {
          if(tempPath  == null) return new NullPointerException("Temp Path Null!");
          if(buildPath == null) return new NullPointerException("Build Path Null!");
          if(mavenPath == null) return new NullPointerException("Maven Path Null!");
-         if(Files.exists(Paths.get(mavenPath))) return new FileNotFoundException("Temp Path Doesn't Exist!");
-    	 return null;
+         if(!Files.exists(Paths.get(mavenPath))) return new FileNotFoundException("Maven Path Doesn't Exist!");
+         return null;
      }
      
      /*
