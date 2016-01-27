@@ -1,6 +1,4 @@
 /**
- *  AutoBuilder Interface
- *  
  *  Copyright (C) 2016  Tuomo Heino, Markus Mulkahainen
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -19,26 +17,29 @@
  */
 package digital.torpedo.yaci.autobuilder;
 
+import java.util.Optional;
+
+import org.apache.maven.shared.invoker.InvocationResult;
+
 /**
  * @author Tuomo Heino
- * @version 19.1.2016
+ * @version 26.1.2016
  */
-public interface AutoBuilder {
-    public static final String BUILD_END = "END_";
-    /**
-     * Intantiates new Instance of AutoBuilder using default implementation
-     * @param mavenPath path to maven folder
-     * @param tempFolder temporary files folder
-     * @param buildFolder build folder for builded jar files
-     * @return AutoBuilder instance
-     */
-    public static AutoBuilder getInstance(String mavenPath, String tempFolder, String buildFolder) {
-        return new AutoBuilderImpl(mavenPath, tempFolder, buildFolder);
-    }
+public class BuildResult {
+    /** Exit Code */
+    public final int exitCode;
+    /** Build Log */
+    public final String buildLog;
+    /** Possible Exception wrapped with Optional */
+    public final Optional<Exception> exception;
     
     /**
-     * Adds YACITask to queue
-     * @param task task to add
+     * BuildResult
+     * @param resCode result code
+     * @param buildLog build log lines
      */
-    public void queueTask(YACITask task);
+    public BuildResult(InvocationResult res, String buildLog) {
+        this.exitCode = res.getExitCode(); this.buildLog = buildLog;
+        this.exception = Optional.ofNullable(res.getExecutionException());
+    }
 }

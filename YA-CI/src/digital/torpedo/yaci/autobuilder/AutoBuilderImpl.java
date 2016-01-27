@@ -47,6 +47,7 @@ import org.apache.maven.shared.invoker.MavenInvocationException;
 import com.google.gson.Gson;
 
 import digital.torpedo.yaci.autobuilder.YACIConfig.YACIConfigBlock;
+import digital.torpedo.yaci.autobuilder.YACITask.YACITaskConf;
 
 
 /**
@@ -96,7 +97,7 @@ class AutoBuilderImpl implements AutoBuilder {
                 Path[] outputs = resolveConfFiles(projectBase);
                 if(outputs != null) {
                     for(Path output : outputs)
-                        buildMe(output);
+                        buildMe(output, task.conf);
                 }
                 if(projectBase != null) {
                     cleanUpQueue.add(projectBase);
@@ -151,15 +152,26 @@ class AutoBuilderImpl implements AutoBuilder {
         return Files.exists(folder.resolve("pom.xml"));
     }
     
-    private void buildMe(Path projectFolder) {
+    private void buildMe(Path projectFolder, YACITaskConf conf) {
         System.out.println("Building: "+projectFolder.toString());
         InvocationRequest req = new DefaultInvocationRequest();
         req.setPomFile(projectFolder.resolve("pom.xml").toFile());
         req.setGoals(Collections.singletonList("package"));
         
-        
+        StringBuilder log = new StringBuilder();
         try {
+            invoker.setOutputHandler(line -> {
+                System.out.println(line);
+                log.append(line);
+                conf.buildOutputPipe.ifPresent(p -> p.accept(line));
+            });
+            
             InvocationResult res = invoker.execute(req);
+            
+            conf.buildOutputPipe.ifPresent(p -> p.accept(AutoBuilder.BUILD_END+res));
+            
+            conf.callback.ifPresent(c -> c.callback(new BuildResult(res, log.toString())));
+            
             if(res.getExitCode() != 0) {
                 if(res.getExecutionException() != null)
                     res.getExecutionException().printStackTrace();
@@ -192,13 +204,15 @@ class AutoBuilderImpl implements AutoBuilder {
             try(DirectoryStream<Path> strm = Files.newDirectoryStream(projectFolder)) {
                 strm.forEach(this::cleanUp);
             } catch (IOException e) {
-                e.printStackTrace();
+                System.err.println(e.getMessage());
+                //e.printStackTrace();
             }
         }
         try {
             Files.deleteIfExists(projectFolder);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println(e.getMessage());
+            //e.printStackTrace();
         }
     }
     

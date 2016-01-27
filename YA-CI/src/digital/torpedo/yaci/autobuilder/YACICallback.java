@@ -1,6 +1,4 @@
 /**
- *  AutoBuilder Interface
- *  
  *  Copyright (C) 2016  Tuomo Heino, Markus Mulkahainen
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -21,24 +19,13 @@ package digital.torpedo.yaci.autobuilder;
 
 /**
  * @author Tuomo Heino
- * @version 19.1.2016
+ * @version 26.1.2016
  */
-public interface AutoBuilder {
-    public static final String BUILD_END = "END_";
+public interface YACICallback {
     /**
-     * Intantiates new Instance of AutoBuilder using default implementation
-     * @param mavenPath path to maven folder
-     * @param tempFolder temporary files folder
-     * @param buildFolder build folder for builded jar files
-     * @return AutoBuilder instance
+     * Callback for build<br>
+     * Returns result object
+     * @param result build result
      */
-    public static AutoBuilder getInstance(String mavenPath, String tempFolder, String buildFolder) {
-        return new AutoBuilderImpl(mavenPath, tempFolder, buildFolder);
-    }
-    
-    /**
-     * Adds YACITask to queue
-     * @param task task to add
-     */
-    public void queueTask(YACITask task);
+    public void callback(BuildResult result);
 }
