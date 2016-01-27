@@ -56,4 +56,11 @@ public class BuildResult {
         this.exitCode = exitCode; this.exception = Optional.ofNullable(ex);
         this.buildLog = message == null ? "" : message;
     }
+    
+    /**
+     * @return if exitCode == 0
+     */
+    public boolean isOk() {
+        return exitCode == 0;
+    }
 }

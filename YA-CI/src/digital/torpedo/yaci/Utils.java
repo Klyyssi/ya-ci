@@ -71,10 +71,15 @@ public class Utils {
     
     public static void writeException(Exception ex, Path p) {
         if(ex != null) {
-            try(PrintWriter out = new PrintWriter(p.toFile())) {
-                ex.printStackTrace(out);
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
+            try {
+                Files.createFile(p);
+                try(PrintWriter out = new PrintWriter(p.toFile())) {
+                    ex.printStackTrace(out);
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                }
+            } catch (IOException e1) {
+                e1.printStackTrace();
             }
         }
     }
