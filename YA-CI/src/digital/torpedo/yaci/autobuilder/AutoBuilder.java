@@ -24,7 +24,6 @@ package digital.torpedo.yaci.autobuilder;
  * @version 19.1.2016
  */
 public interface AutoBuilder {
-    public static final String BUILD_END = "END_";
     /**
      * Intantiates new Instance of AutoBuilder using default implementation
      * @param mavenPath path to maven folder

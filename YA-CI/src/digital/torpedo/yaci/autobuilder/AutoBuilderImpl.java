@@ -20,13 +20,19 @@
 package digital.torpedo.yaci.autobuilder;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -46,9 +52,9 @@ import org.apache.maven.shared.invoker.MavenInvocationException;
 
 import com.google.gson.Gson;
 
+import digital.torpedo.yaci.Utils;
 import digital.torpedo.yaci.autobuilder.YACIConfig.YACIConfigBlock;
 import digital.torpedo.yaci.autobuilder.YACITask.YACITaskConf;
-
 
 /**
  * @author Tuomo Heino
@@ -93,11 +99,15 @@ class AutoBuilderImpl implements AutoBuilder {
                 YACITask task = buildQueue.take();
                 if(task == null) continue;
                 System.out.println("Processing: "+task);
-                Path projectBase = task.srcType.processer.processFile(task.source, tempFolder, stamp(), task.conf); 
+                String stamp = stamp();
+                Path projectBase = task.srcType.processer.processFile(task.source, tempFolder, stamp, task.conf); 
                 Path[] outputs = resolveConfFiles(projectBase);
                 if(outputs != null) {
+                    List<BuildResult> buildResults = new ArrayList<>();
                     for(Path output : outputs)
-                        buildMe(output, task.conf);
+                        buildResults.add(buildMe(output, task.conf));
+                    
+                    task.conf.callback.ifPresent(c -> c.callback(buildResults));
                 }
                 if(projectBase != null) {
                     cleanUpQueue.add(projectBase);
@@ -152,13 +162,16 @@ class AutoBuilderImpl implements AutoBuilder {
         return Files.exists(folder.resolve("pom.xml"));
     }
     
-    private void buildMe(Path projectFolder, YACITaskConf conf) {
-        System.out.println("Building: "+projectFolder.toString());
+    private BuildResult buildMe(Path projectFolder, YACITaskConf conf) {
+        System.out.println("Starting Maven Build: "+projectFolder.toString());
+        
         InvocationRequest req = new DefaultInvocationRequest();
         req.setPomFile(projectFolder.resolve("pom.xml").toFile());
         req.setGoals(Collections.singletonList("package"));
         
+        Path baseBuild = buildFolder.resolve(checkPathStamp(projectFolder.getFileName()));
         StringBuilder log = new StringBuilder();
+        
         try {
             invoker.setOutputHandler(line -> {
                 System.out.println(line);
@@ -168,21 +181,46 @@ class AutoBuilderImpl implements AutoBuilder {
             
             InvocationResult res = invoker.execute(req);
             
-            conf.buildOutputPipe.ifPresent(p -> p.accept(AutoBuilder.BUILD_END+res));
-            
-            conf.callback.ifPresent(c -> c.callback(new BuildResult(res, log.toString())));
-            
             if(res.getExitCode() != 0) {
                 if(res.getExecutionException() != null)
                     res.getExecutionException().printStackTrace();
-            } else {
-                moveJars(projectFolder);
-                System.out.println("Build Finished!");
+                
+                return writeBuildLogs(baseBuild, new BuildResult(res, log.toString()));
+            } 
+            
+            Path target = projectFolder.resolve("target");
+            if (!Files.exists(target)) {
+                System.err.println("Maven Build Failed!");
+                return writeBuildLogs(baseBuild, new BuildResult(BuildResult.INTERNAL_ERROR, new FileNotFoundException("No Target Folder Found!"), "Maven Build Failed!"));
             }
+            Utils.createDirectories(baseBuild);
+            
+            try (DirectoryStream<Path> jarStrm = Files.newDirectoryStream(target, "*.jar")) {
+                jarStrm.forEach(p -> move(p, baseBuild));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            System.out.println("Maven Build Finished!");
+            return writeBuildLogs(baseBuild, new BuildResult(res, log.toString()));
         } catch (MavenInvocationException e) {
+            System.err.println("Maven Build Failed!");
             e.printStackTrace();
-            conf.callback.ifPresent(c -> c.callback(new BuildResult(BuildResult.INTERNAL_ERROR, e, e.getMessage())));
+            return writeBuildLogs(baseBuild, new BuildResult(BuildResult.INTERNAL_ERROR, e, "ERROR: "+e.getMessage()));
         }
+    }
+    
+    private BuildResult writeBuildLogs(Path baseBuild, BuildResult result) {
+        String stamp = stamp();
+        try(BufferedWriter out = Files.newBufferedWriter(baseBuild.resolve("build_"+stamp+".log"), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+            out.write("Exit Code: "+result.exitCode);
+            out.newLine();
+            out.write(result.buildLog);
+            out.newLine();
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
+        result.exception.ifPresent(ex -> Utils.writeException(ex, baseBuild.resolve("error_"+stamp+".log")));
+        return result;
     }
     
     /**
@@ -224,28 +262,6 @@ class AutoBuilderImpl implements AutoBuilder {
         if(str.matches(stampRegExp))
             return str;
         return str+stamp;
-    }
-
-    private void moveJars(Path inputFolder) {
-        Path target = inputFolder.resolve("target");
-        if(!Files.exists(target)) {
-            System.err.println("Maven Build Failed!");
-            return;
-        }
-        
-        Path baseBuild = buildFolder.resolve(checkPathStamp(inputFolder.getFileName()));
-        if (!Files.exists(baseBuild)) {
-            try {
-                Files.createDirectories(baseBuild);
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
-        }
-        try(DirectoryStream<Path> jarStrm = Files.newDirectoryStream(target, "*.jar")) {
-            jarStrm.forEach(p -> move(p, baseBuild));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
     
     private void move(Path file, Path base) {

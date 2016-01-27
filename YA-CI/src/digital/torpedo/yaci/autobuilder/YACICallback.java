@@ -17,6 +17,8 @@
  */
 package digital.torpedo.yaci.autobuilder;
 
+import java.util.List;
+
 /**
  * @author Tuomo Heino
  * @version 26.1.2016
@@ -27,5 +29,5 @@ public interface YACICallback {
      * Returns result object
      * @param result build result
      */
-    public void callback(BuildResult result);
+    public void callback(List<BuildResult> result);
 }
