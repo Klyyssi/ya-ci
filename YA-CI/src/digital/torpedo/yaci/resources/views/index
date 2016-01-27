@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <script>
+        function hideElement(elementId, bHide) { document.getElementById(elementId).style.display = bHide ? 'none' : 'block'; document.getElementById(elementId).disabled = bHide; }
+    </script>
+    <h1>YA-CI</h1>
+    <form action="build?" id="form" method="get">
+        <p id="urlP">URL: <input type="text" id="txtUrl" style="width: 400px" name="url"></p>
+        <p id="ibranch">Branch: <input type="text" value="master" name="branch"></p>
+        <!-- TODO:<input type="file" id="browse" name="file" style="display: none;"> -->
+        <p><input type="radio" name="sourcetype" checked="checked" value="git" onclick="hideElement('ibranch', false); hideElement('browse', true);hideElement('urlP', false);setFormMethod('get');">Git
+        <!-- TODO: <input type="radio" name="sourcetype" value="zip" onclick="hideElement('ibranch', true); hideElement('browse', false); hideElement('urlP', true); setFormMethod('post');">Zip -->
+        <input type="radio" name="sourcetype" value="httpzip" onclick="hideElement('ibranch', true);">HttpZip</p>
+        <button type="submit" form="form">Build</button>
+    </form>
+
+    <ya-ci:TABLE>
+
+</body>
+</html>
