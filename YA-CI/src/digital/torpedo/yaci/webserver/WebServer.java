@@ -58,6 +58,7 @@ public class WebServer extends AbstractServer {
             response = Views.get("index").replaceAll("<ya-ci:TABLE>", createBuildTable());
         } catch (IOException ex) {
             System.err.println("Failed to get index file or create build table \n" + ex);
+            return Responses.somethingWentWrong();
         }
 
         return newFixedLengthResponse(response);
@@ -82,6 +83,7 @@ public class WebServer extends AbstractServer {
             response = Views.get("build").replaceAll("<ya-ci:BUILD_MSG>", "Project is being built from " + urlParam + "...");
         } catch (IOException ioe) {
             System.err.println("Failed to get build view \n" + ioe);
+            return Responses.somethingWentWrong();
         }
         
         return newFixedLengthResponse(response);

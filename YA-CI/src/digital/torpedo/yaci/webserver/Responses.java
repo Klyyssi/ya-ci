@@ -34,8 +34,14 @@ public class Responses {
     }
     
     public static Response errorWrongUriParameters() {
-        return newFixedLengthResponse(Response.Status.BAD_REQUEST, NanoHTTPD.MIME_PLAINTEXT, 
+        return newFixedLengthResponse(Response.Status.BAD_REQUEST, NanoHTTPD.MIME_HTML, 
                         "<!DOCTYPE html><html><body><h1>YA-CI</h1>"
                         + "<p>Failed to operate. Bad URL parameters.</p></body></html>");
+    }
+    
+    public static Response somethingWentWrong() {
+        return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_HTML,
+                "<!DOCTYPE html><html><body><h1>YA-CI</h1>"
+                + "<p>Oops! Something went wrong.</p></body></html>");
     }
 }
