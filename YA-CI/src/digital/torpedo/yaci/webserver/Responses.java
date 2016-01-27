@@ -1,5 +1,5 @@
 /**
- *  Very simple uri-to-handler mapping mechanism
+ *  Contains some general web server responses
  *  
  *  Copyright (C) 2016  Tuomo Heino, Markus Mulkahainen
  *
@@ -17,40 +17,25 @@
  *  along with this program; if not, you can access it online at
  *  http://www.gnu.org/licenses/gpl-2.0.html.
  */
-
 package digital.torpedo.yaci.webserver;
 
 import fi.iki.elonen.NanoHTTPD;
-
-import java.io.IOException;
-import java.util.Map;
-import java.util.function.*;
-import java.util.HashMap;
+import fi.iki.elonen.NanoHTTPD.Response;
+import static fi.iki.elonen.NanoHTTPD.newFixedLengthResponse;
 
 /**
+ *
  * @author Markus Mulkahainen
  */
-public class AbstractServer extends NanoHTTPD {
+public class Responses {
     
-    private final Map<String, Function<IHTTPSession, Response>> uriToHandler = new HashMap<>();
-
-    public AbstractServer(int port) throws IOException {
-        super(port);
-        start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);        
+    public static Response error404() {
+        return newFixedLengthResponse(Response.Status.NOT_FOUND, NanoHTTPD.MIME_PLAINTEXT, "HTTP Error 404 - Page Not Found");        
     }
     
-    public void addMapping(String route, Function<IHTTPSession, Response> handler) {
-        uriToHandler.put(route, handler);
-    }
-    
-    @Override
-    public Response serve(IHTTPSession session) {
-        Function<IHTTPSession, Response> handler = uriToHandler.get(session.getUri().substring(1));
-        
-        if (handler == null) {     
-            return Responses.error404();
-        }
-        
-        return handler.apply(session);
+    public static Response errorWrongUriParameters() {
+        return newFixedLengthResponse(Response.Status.BAD_REQUEST, NanoHTTPD.MIME_PLAINTEXT, 
+                        "<!DOCTYPE html><html><body><h1>YA-CI</h1>"
+                        + "<p>Failed to operate. Bad URL parameters.</p></body></html>");
     }
 }
