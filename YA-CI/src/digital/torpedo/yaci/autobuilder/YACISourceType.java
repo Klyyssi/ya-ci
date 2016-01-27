@@ -21,6 +21,7 @@ package digital.torpedo.yaci.autobuilder;
 
 import digital.torpedo.yaci.autobuilder.fileprocessers.Gitter;
 import digital.torpedo.yaci.autobuilder.fileprocessers.Unzipper;
+import java.util.Optional;
 
 /**
  * @author Tuomo Heino
@@ -38,5 +39,18 @@ public enum YACISourceType {
     
     private YACISourceType(FileProcesser processer) {
         this.processer = processer;
+    }
+    
+    public static Optional<YACISourceType> fromString(String sourceType) {
+        switch (sourceType) {
+            case "git":
+                return Optional.of(YACISourceType.GIT);
+            case "httpzip":
+                return Optional.of(YACISourceType.HTTP_ZIP);
+            case "zip":
+                return Optional.of(YACISourceType.ZIP);
+            default:
+                return Optional.empty();
+        }
     }
 }
