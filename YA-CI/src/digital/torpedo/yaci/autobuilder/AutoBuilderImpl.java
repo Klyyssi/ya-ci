@@ -37,6 +37,7 @@ import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Scanner;
 import java.util.concurrent.PriorityBlockingQueue;
 
@@ -123,7 +124,7 @@ class AutoBuilderImpl implements AutoBuilder {
                 if(clean == null) return;
                 System.out.println("Starting Clean Up!");
                 waitFor(5000);
-                cleanUp(clean);
+                cleanUpDuty(clean).ifPresent(cleanUpQueue::add);
                 System.out.println("Clean Up Done!");
             } catch(Exception ex) {
                 ex.printStackTrace();
@@ -230,25 +231,32 @@ class AutoBuilderImpl implements AutoBuilder {
         } catch(Exception ex) {}
     }
     
+    private Optional<Path> cleanUpDuty(Path cleanMe) {
+        List<Exception> exceptions = new ArrayList<>();
+        cleanUp(cleanMe, exceptions);
+        if(exceptions.isEmpty()) return Optional.empty();
+        return Optional.ofNullable(cleanMe);
+    }
+    
     /**
      * Cleans Folder
      * @param projectFolder
      */
-    private void cleanUp(Path projectFolder) {
+    private void cleanUp(Path projectFolder, List<Exception> ex) {
         //TODO Won't delete git files properly!
         if(Files.isDirectory(projectFolder)) {
             try(DirectoryStream<Path> strm = Files.newDirectoryStream(projectFolder)) {
-                strm.forEach(this::cleanUp);
+                strm.forEach(f -> cleanUp(f, ex));
             } catch (IOException e) {
                 System.err.println(e.getMessage());
-                //e.printStackTrace();
+                ex.add(e);
             }
         }
         try {
             Files.deleteIfExists(projectFolder);
         } catch (IOException e) {
             System.err.println(e.getMessage());
-            //e.printStackTrace();
+            ex.add(e);
         }
     }
     
@@ -291,8 +299,8 @@ class AutoBuilderImpl implements AutoBuilder {
      */
     public static void main(String[] args) {
         AutoBuilder bldr = AutoBuilder.getInstance("C:\\maven\\", "temp/", "build/");
-        bldr.queueTask(new YACITask.YACITaskBuilder("TextAdventure.zip", YACISourceType.ZIP).callback(list -> System.out.println(list.size())).build());
-        //bldr.queueTask(new YACITask.YACITaskBuilder("https://taavistain@bitbucket.org/taavistain/tekstiseikkailu.git", YACISourceType.GIT).build());
+        //bldr.queueTask(new YACITask.YACITaskBuilder("TextAdventure.zip", YACISourceType.ZIP).callback(list -> System.out.println(list.size())).build());
+        bldr.queueTask(new YACITask.YACITaskBuilder("https://taavistain@bitbucket.org/taavistain/tekstiseikkailu.git", YACISourceType.GIT).build());
         try(Scanner sc = new Scanner(System.in)) {
             sc.nextLine();
         }

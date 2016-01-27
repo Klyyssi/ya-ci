@@ -47,6 +47,8 @@ public class Gitter implements FileProcesser {
             if(config.gitBranch != null) {
                 repo.checkout().setName(config.gitBranch).call();
             }
+            repo.close();
+            repo.getRepository().close();
             return folder;
         } catch (GitAPIException e) {
             e.printStackTrace();
