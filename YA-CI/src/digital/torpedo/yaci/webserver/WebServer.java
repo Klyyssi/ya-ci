@@ -31,6 +31,7 @@ import java.nio.file.Paths;
 import java.util.stream.Collector;
 import java.util.Date;
 import java.text.SimpleDateFormat;
+import java.util.Optional;
 
 /**
  *
@@ -52,34 +53,38 @@ public class WebServer extends AbstractServer {
     }
     
     public Response index(IHTTPSession session) {
-        String msg = "<!DOCTYPE html><html><body><h1>YA-CI</h1>\n";
-
-        msg += "<form action='build?' id='form' method='get'>\n"
-                + "<p>URL: <input type='text' style='width: 400px' name='url'></p>\n"
-                + "<p>Branch: <input type='text' value='master' name='branch'></p>\n"
-                + "<input type='radio' name='sourcetype' checked='checked' value='git'>Git\n"
-                + "<input type='radio' name='sourcetype' value='zip'>Zip\n"
-                + "<input type='radio' name='sourcetype' value='httpzip'>HttpZip</br>\n"
-                + "<button type='submit' form='form'>Build</button>\n</form>";
+        String response = "";
         try {
-            msg += createBuildTable();
+            response = Views.get("index").replaceAll("<ya-ci:TABLE>", createBuildTable());
         } catch (IOException ex) {
-            System.err.println("Couldn't create build table " + ex);
+            System.err.println("Failed to get index file or create build table \n" + ex);
         }
 
-        return newFixedLengthResponse(msg + "</body></html>\n");
+        return newFixedLengthResponse(response);
     }
 
     public Response build(IHTTPSession session) {
-        String msg = "<!DOCTYPE html><html><body><h1>YA-CI</h1>\n";
+        String response = "";
         String urlParam = session.getParms().get("url");
         String gitBranch = session.getParms().get("branch");
-        if (urlParam == null) {
-            return newFixedLengthResponse(msg + "No build URL found </body></html>\n");
+        Optional<YACISourceType> sourceType = YACISourceType.fromString(session.getParms().get("sourcetype"));
+        
+        if (!sourceType.isPresent() || urlParam == null) {
+            return Responses.errorWrongUriParameters();
         }
-        builder.queueTask(new YACITask.YACITaskBuilder(urlParam, YACISourceType.GIT).gitBranch(gitBranch).build());
-        msg += "<p>Project is being built from " + urlParam + "...</p>\n<a href='/'>Go back</a>";   
-        return newFixedLengthResponse(msg + "</body></html>\n");
+        if (sourceType.get() == YACISourceType.GIT && gitBranch == null) {
+            return Responses.errorWrongUriParameters();
+        }
+            
+        builder.queueTask(new YACITask.YACITaskBuilder(urlParam, sourceType.get()).gitBranch(gitBranch).build());
+        
+        try {
+            response = Views.get("build").replaceAll("<ya-ci:BUILD_MSG>", "Project is being built from " + urlParam + "...");
+        } catch (IOException ioe) {
+            System.err.println("Failed to get build view \n" + ioe);
+        }
+        
+        return newFixedLengthResponse(response);
     }
     
     private String createBuildTable() throws IOException {
