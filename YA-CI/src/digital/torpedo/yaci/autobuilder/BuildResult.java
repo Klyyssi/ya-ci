@@ -22,11 +22,14 @@ import java.util.Optional;
 import org.apache.maven.shared.invoker.InvocationResult;
 
 /**
+ * BuildResult for YACICallback
+ * If exit code == INTERNAL_ERROR there was an exception with maven invoker
  * @author Tuomo Heino
  * @version 26.1.2016
  */
 public class BuildResult {
-    /** Exit Code */
+    public static final int INTERNAL_ERROR = -32444;
+    /** Exit Code, -1 for internal error */
     public final int exitCode;
     /** Build Log */
     public final String buildLog;
@@ -41,5 +44,16 @@ public class BuildResult {
     public BuildResult(InvocationResult res, String buildLog) {
         this.exitCode = res.getExitCode(); this.buildLog = buildLog;
         this.exception = Optional.ofNullable(res.getExecutionException());
+    }
+    
+    /**
+     * BuildResult with code, message and exception
+     * @param exitCode exit code, 0 means ALL OK.
+     * @param ex exception, can be null
+     * @param message, message to display, can be null
+     */
+    public BuildResult(int exitCode, Exception ex, String message) {
+        this.exitCode = exitCode; this.exception = Optional.ofNullable(ex);
+        this.buildLog = message == null ? "" : message;
     }
 }

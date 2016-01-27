@@ -181,6 +181,7 @@ class AutoBuilderImpl implements AutoBuilder {
             }
         } catch (MavenInvocationException e) {
             e.printStackTrace();
+            conf.callback.ifPresent(c -> c.callback(new BuildResult(BuildResult.INTERNAL_ERROR, e, e.getMessage())));
         }
     }
     
