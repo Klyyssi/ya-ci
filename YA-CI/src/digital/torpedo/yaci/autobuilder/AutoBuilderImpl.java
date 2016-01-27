@@ -20,13 +20,16 @@
 package digital.torpedo.yaci.autobuilder;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -34,6 +37,7 @@ import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Scanner;
 import java.util.concurrent.PriorityBlockingQueue;
 
@@ -46,8 +50,9 @@ import org.apache.maven.shared.invoker.MavenInvocationException;
 
 import com.google.gson.Gson;
 
+import digital.torpedo.yaci.Utils;
 import digital.torpedo.yaci.autobuilder.YACIConfig.YACIConfigBlock;
-
+import digital.torpedo.yaci.autobuilder.YACITask.YACITaskConf;
 
 /**
  * @author Tuomo Heino
@@ -92,11 +97,15 @@ class AutoBuilderImpl implements AutoBuilder {
                 YACITask task = buildQueue.take();
                 if(task == null) continue;
                 System.out.println("Processing: "+task);
-                Path projectBase = task.srcType.processer.processFile(task.source, tempFolder, stamp(), task.conf); 
+                String stamp = stamp();
+                Path projectBase = task.srcType.processer.processFile(task.source, tempFolder, stamp, task.conf); 
                 Path[] outputs = resolveConfFiles(projectBase);
                 if(outputs != null) {
+                    List<BuildResult> buildResults = new ArrayList<>();
                     for(Path output : outputs)
-                        buildMe(output);
+                        buildResults.add(buildMe(output, task.conf));
+                    
+                    task.conf.callback.ifPresent(c -> c.callback(buildResults));
                 }
                 if(projectBase != null) {
                     cleanUpQueue.add(projectBase);
@@ -115,7 +124,7 @@ class AutoBuilderImpl implements AutoBuilder {
                 if(clean == null) return;
                 System.out.println("Starting Clean Up!");
                 waitFor(5000);
-                cleanUp(clean);
+                cleanUpDuty(clean).ifPresent(cleanUpQueue::add);
                 System.out.println("Clean Up Done!");
             } catch(Exception ex) {
                 ex.printStackTrace();
@@ -151,25 +160,65 @@ class AutoBuilderImpl implements AutoBuilder {
         return Files.exists(folder.resolve("pom.xml"));
     }
     
-    private void buildMe(Path projectFolder) {
-        System.out.println("Building: "+projectFolder.toString());
+    private BuildResult buildMe(Path projectFolder, YACITaskConf conf) {
+        System.out.println("Starting Maven Build: "+projectFolder.toString());
+        
         InvocationRequest req = new DefaultInvocationRequest();
         req.setPomFile(projectFolder.resolve("pom.xml").toFile());
         req.setGoals(Collections.singletonList("package"));
         
+        Path baseBuild = buildFolder.resolve(checkPathStamp(projectFolder.getFileName()));
+        StringBuilder log = new StringBuilder();
         
         try {
+            invoker.setOutputHandler(line -> {
+                System.out.println(line);
+                log.append(line).append(System.lineSeparator());
+                conf.buildOutputPipe.ifPresent(p -> p.accept(line));
+            });
+            
             InvocationResult res = invoker.execute(req);
+            
             if(res.getExitCode() != 0) {
                 if(res.getExecutionException() != null)
                     res.getExecutionException().printStackTrace();
-            } else {
-                moveJars(projectFolder);
-                System.out.println("Build Finished!");
+                
+                return writeBuildLogs(baseBuild, new BuildResult(res, log.toString()));
+            } 
+            
+            Path target = projectFolder.resolve("target");
+            if (!Files.exists(target)) {
+                System.err.println("Maven Build Failed!");
+                return writeBuildLogs(baseBuild, new BuildResult(BuildResult.INTERNAL_ERROR, new FileNotFoundException("No Target Folder Found!"), "Maven Build Failed!"));
             }
+            Utils.createDirectories(baseBuild);
+            
+            try (DirectoryStream<Path> jarStrm = Files.newDirectoryStream(target, "*.jar")) {
+                jarStrm.forEach(p -> move(p, baseBuild));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            System.out.println("Maven Build Finished!");
+            return writeBuildLogs(baseBuild, new BuildResult(res, log.toString()));
         } catch (MavenInvocationException e) {
+            System.err.println("Maven Build Failed!");
+            e.printStackTrace();
+            return writeBuildLogs(baseBuild, new BuildResult(BuildResult.INTERNAL_ERROR, e, "ERROR: "+e.getMessage()));
+        }
+    }
+    
+    private BuildResult writeBuildLogs(Path baseBuild, BuildResult result) {
+        String stamp = stamp();
+        try(BufferedWriter out = Files.newBufferedWriter(baseBuild.resolve("build_"+stamp+".log"), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+            out.write("Exit Code: "+result.exitCode);
+            out.newLine();
+            out.write(result.buildLog);
+            out.newLine();
+        } catch(IOException e) {
             e.printStackTrace();
         }
+        result.exception.ifPresent(ex -> Utils.writeException(ex, baseBuild.resolve("error_"+stamp+".log")));
+        return result;
     }
     
     /**
@@ -182,23 +231,32 @@ class AutoBuilderImpl implements AutoBuilder {
         } catch(Exception ex) {}
     }
     
+    private Optional<Path> cleanUpDuty(Path cleanMe) {
+        List<Exception> exceptions = new ArrayList<>();
+        cleanUp(cleanMe, exceptions);
+        if(exceptions.isEmpty()) return Optional.empty();
+        return Optional.ofNullable(cleanMe);
+    }
+    
     /**
      * Cleans Folder
      * @param projectFolder
      */
-    private void cleanUp(Path projectFolder) {
+    private void cleanUp(Path projectFolder, List<Exception> ex) {
         //TODO Won't delete git files properly!
         if(Files.isDirectory(projectFolder)) {
             try(DirectoryStream<Path> strm = Files.newDirectoryStream(projectFolder)) {
-                strm.forEach(this::cleanUp);
+                strm.forEach(f -> cleanUp(f, ex));
             } catch (IOException e) {
-                e.printStackTrace();
+                System.err.println(e.getMessage());
+                ex.add(e);
             }
         }
         try {
             Files.deleteIfExists(projectFolder);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println(e.getMessage());
+            ex.add(e);
         }
     }
     
@@ -209,28 +267,6 @@ class AutoBuilderImpl implements AutoBuilder {
         if(str.matches(stampRegExp))
             return str;
         return str+stamp;
-    }
-
-    private void moveJars(Path inputFolder) {
-        Path target = inputFolder.resolve("target");
-        if(!Files.exists(target)) {
-            System.err.println("Maven Build Failed!");
-            return;
-        }
-        
-        Path baseBuild = buildFolder.resolve(checkPathStamp(inputFolder.getFileName()));
-        if (!Files.exists(baseBuild)) {
-            try {
-                Files.createDirectories(baseBuild);
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
-        }
-        try(DirectoryStream<Path> jarStrm = Files.newDirectoryStream(target, "*.jar")) {
-            jarStrm.forEach(p -> move(p, baseBuild));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
     
     private void move(Path file, Path base) {
@@ -263,7 +299,7 @@ class AutoBuilderImpl implements AutoBuilder {
      */
     public static void main(String[] args) {
         AutoBuilder bldr = AutoBuilder.getInstance("C:\\maven\\", "temp/", "build/");
-        //bldr.queueTask(new YACITask.YACITaskBuilder("TextAdventure.zip", YACISourceType.ZIP).build());
+        //bldr.queueTask(new YACITask.YACITaskBuilder("TextAdventure.zip", YACISourceType.ZIP).callback(list -> System.out.println(list.size())).build());
         bldr.queueTask(new YACITask.YACITaskBuilder("https://taavistain@bitbucket.org/taavistain/tekstiseikkailu.git", YACISourceType.GIT).build());
         try(Scanner sc = new Scanner(System.in)) {
             sc.nextLine();

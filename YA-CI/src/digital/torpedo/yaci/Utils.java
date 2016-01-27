@@ -19,6 +19,10 @@
  */
 package digital.torpedo.yaci;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
@@ -46,5 +50,37 @@ public class Utils {
         int lastIndex = name.lastIndexOf('.');
         if(lastIndex == -1 || lastIndex == 0) return name;
         return name.substring(0, lastIndex);
+    }
+    
+    /**
+     * Tries to Create Given Folder and any parent folders
+     * @param folder folder path
+     * @return if succeeded
+     */
+    public static boolean createDirectories(Path folder) {
+        if (!Files.exists(folder)) {
+            try {
+                Files.createDirectories(folder);
+            } catch (IOException e1) {
+                e1.printStackTrace();
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    public static void writeException(Exception ex, Path p) {
+        if(ex != null) {
+            try {
+                Files.createFile(p);
+                try(PrintWriter out = new PrintWriter(p.toFile())) {
+                    ex.printStackTrace(out);
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                }
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+        }
     }
 }

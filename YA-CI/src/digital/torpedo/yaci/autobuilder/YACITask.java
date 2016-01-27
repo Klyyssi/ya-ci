@@ -19,6 +19,9 @@
  */
 package digital.torpedo.yaci.autobuilder;
 
+import java.util.Optional;
+import java.util.function.Consumer;
+
 /**
  * QueueFile, Comparing always results 0
  * @author Tuomo Heino
@@ -29,9 +32,9 @@ public class YACITask implements Comparable<YACITask> {
     final YACISourceType srcType;
     final YACITaskConf conf;
     
-    YACITask(String source, YACISourceType srcType, String gitBranch) {
+    YACITask(String source, YACISourceType srcType, String gitBranch, Consumer<String> buildOutputPipe, YACICallback callback) {
         this.source = source; this.srcType = srcType;
-        this.conf = new YACITaskConf(gitBranch);
+        this.conf = new YACITaskConf(gitBranch, buildOutputPipe, callback);
     }
     
     @Override
@@ -47,9 +50,15 @@ public class YACITask implements Comparable<YACITask> {
     public static class YACITaskConf {
         /** Git Branch to use */
         public final String gitBranch;
+        /** Output Pipe for Build Processes Messages */
+        public final Optional<Consumer<String>> buildOutputPipe;
+        /** Callback */
+        public final Optional<YACICallback> callback;
         
-        YACITaskConf(String gitBranch) {
+        YACITaskConf(String gitBranch, Consumer<String> buildOutputPipe, YACICallback callback) {
             this.gitBranch = gitBranch;
+            this.buildOutputPipe = Optional.ofNullable(buildOutputPipe);
+            this.callback = Optional.ofNullable(callback);
         }
     }
     
@@ -62,6 +71,8 @@ public class YACITask implements Comparable<YACITask> {
         private String source;
         private YACISourceType srcType;
         private String gitBranch;
+        private Consumer<String> buildOutputPipe;
+        private YACICallback callback;
         
         /**
          * @param source source
@@ -82,14 +93,30 @@ public class YACITask implements Comparable<YACITask> {
         }
         
         /**
+         * Build Process will pipe it's output to given consumer
+         * @param buildOutPipe build output
+         * @return this builder for chaining
+         */
+        public YACITaskBuilder buildOutputPipe(Consumer<String> buildOutputPipe) {
+            this.buildOutputPipe = buildOutputPipe;
+            return this;
+        }
+        
+        /**
+         * Callback for build process, returns with BuildResult object
+         * @param callback callback
+         * @return this builder for chaining
+         */
+        public YACITaskBuilder callback(YACICallback callback) {
+            this.callback = callback;
+            return this;
+        }
+        
+        /**
          * @return builds YACITask
          */
         public YACITask build() {
-            /*
-            if(source == null) throw new YACITaskException("Source cannot be NULL!");
-            if(srcType == null) throw new YACITaskException("Source Type cannot be NULL!");
-            */
-            return new YACITask(source, srcType, gitBranch);
+            return new YACITask(source, srcType, gitBranch, buildOutputPipe, callback);
         }
     }
 }
