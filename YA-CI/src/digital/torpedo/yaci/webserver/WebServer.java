@@ -56,6 +56,7 @@ public class WebServer extends AbstractServer {
 
         msg += "<form action='build?' id='form' method='get'>\n"
                 + "<p>URL: <input type='text' style='width: 400px' name='url'></p>\n"
+                + "<p>Branch: <input type='text' value='master' name='branch'></p>\n"
                 + "<input type='radio' name='sourcetype' checked='checked' value='git'>Git\n"
                 + "<input type='radio' name='sourcetype' value='zip'>Zip\n"
                 + "<input type='radio' name='sourcetype' value='httpzip'>HttpZip</br>\n"
@@ -72,10 +73,11 @@ public class WebServer extends AbstractServer {
     public Response build(IHTTPSession session) {
         String msg = "<!DOCTYPE html><html><body><h1>YA-CI</h1>\n";
         String urlParam = session.getParms().get("url");
+        String gitBranch = session.getParms().get("branch");
         if (urlParam == null) {
             return newFixedLengthResponse(msg + "No build URL found </body></html>\n");
         }
-        builder.queueTask(new YACITask.YACITaskBuilder(urlParam, YACISourceType.GIT).build());
+        builder.queueTask(new YACITask.YACITaskBuilder(urlParam, YACISourceType.GIT).gitBranch(gitBranch).build());
         msg += "<p>Project is being built from " + urlParam + "...</p>\n<a href='/'>Go back</a>";   
         return newFixedLengthResponse(msg + "</body></html>\n");
     }
