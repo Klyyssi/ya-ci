@@ -300,7 +300,7 @@ class AutoBuilderImpl implements AutoBuilder {
     public static void main(String[] args) {
         AutoBuilder bldr = AutoBuilder.getInstance("C:\\maven\\", "temp/", "build/");
         //bldr.queueTask(new YACITask.YACITaskBuilder("TextAdventure.zip", YACISourceType.ZIP).callback(list -> System.out.println(list.size())).build());
-        bldr.queueTask(new YACITask.YACITaskBuilder("https://taavistain@bitbucket.org/taavistain/tekstiseikkailu.git", YACISourceType.GIT).build());
+        bldr.queueTask(new YACITask.YACITaskBuilder("https://taavistain@bitbucket.org/taavistain/tekstiseikkailu.git", YACISourceType.GIT).gitBranch("develop").build());
         try(Scanner sc = new Scanner(System.in)) {
             sc.nextLine();
         }

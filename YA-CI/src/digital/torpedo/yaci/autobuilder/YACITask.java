@@ -49,14 +49,14 @@ public class YACITask implements Comparable<YACITask> {
      */
     public static class YACITaskConf {
         /** Git Branch to use */
-        public final String gitBranch;
+        public final Optional<String> gitBranch;
         /** Output Pipe for Build Processes Messages */
         public final Optional<Consumer<String>> buildOutputPipe;
         /** Callback */
         public final Optional<YACICallback> callback;
         
         YACITaskConf(String gitBranch, Consumer<String> buildOutputPipe, YACICallback callback) {
-            this.gitBranch = gitBranch;
+            this.gitBranch = Optional.ofNullable(gitBranch);
             this.buildOutputPipe = Optional.ofNullable(buildOutputPipe);
             this.callback = Optional.ofNullable(callback);
         }
