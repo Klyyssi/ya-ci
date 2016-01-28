@@ -23,6 +23,11 @@ import digital.torpedo.yaci.Config;
 import digital.torpedo.yaci.autobuilder.AutoBuilder;
 import digital.torpedo.yaci.autobuilder.YACISourceType;
 import digital.torpedo.yaci.autobuilder.YACITask;
+import fi.iki.elonen.NanoHTTPD;
+import fi.iki.elonen.NanoHTTPD.Response.Status;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 
 
 import java.io.IOException;
@@ -31,7 +36,11 @@ import java.nio.file.Paths;
 import java.util.stream.Collector;
 import java.util.Date;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
 /**
  *
@@ -50,22 +59,47 @@ public class WebServer extends AbstractServer {
         super.addMapping("", this::index);
         super.addMapping("index.html", this::index);
         super.addMapping("build", this::build);
+        super.addMapping("download", this::download);
     }
     
     public Response index(IHTTPSession session) {
-        String response = "";
+        return getView("index", x -> x.replaceAll("<ya-ci:TABLE>", createBuildTable()));
+    }
+    
+    public Response download(IHTTPSession session) {
+        String rootDir = session.getParms().get("file");
+        if (rootDir == null) return Responses.errorWrongUriParameters();
+        
+        String rootPath = BUILD_PATH + "/" + rootDir;
+        String filePath;
+        long fileSize;
+        String fileName;
+        FileInputStream fis;
         try {
-            response = Views.get("index").replaceAll("<ya-ci:TABLE>", createBuildTable());
-        } catch (IOException ex) {
-            System.err.println("Failed to get index file or create build table \n" + ex);
-            return Responses.somethingWentWrong();
+            File root = new File(rootPath);
+            List<File> builtFiles = new ArrayList<>(Arrays.asList(root.listFiles()));
+            
+            if (builtFiles.size() > 1) {
+                //TODO: ZIP all files
+                fileName = builtFiles.get(0).getName();
+            } else {
+                fileName = builtFiles.get(0).getName();
+            }
+            
+            filePath = rootPath + "/" +fileName;
+            fileSize = new File(filePath).length();
+            fis = new FileInputStream(filePath);        
+        } catch (FileNotFoundException e) {
+            System.err.println(e);
+            return Responses.errorWrongUriParameters();
         }
-
-        return newFixedLengthResponse(response);
+        
+        NanoHTTPD.Response response = newFixedLengthResponse(Status.OK, NanoHTTPD.getMimeTypeForFile(filePath), fis, fileSize);
+        response.addHeader("Content-Disposition", "attachment; filename=" + fileName);
+        return response;
     }
 
     public Response build(IHTTPSession session) {
-        String response = "";
         String urlParam = session.getParms().get("url");
         String gitBranch = session.getParms().get("branch");
         Optional<YACISourceType> sourceType = YACISourceType.fromString(session.getParms().get("sourcetype"));
@@ -79,19 +113,22 @@ public class WebServer extends AbstractServer {
             
         builder.queueTask(new YACITask.YACITaskBuilder(urlParam, sourceType.get()).gitBranch(gitBranch).build());
         
-        try {
-            response = Views.get("build").replaceAll("<ya-ci:BUILD_MSG>", "Project is being built from " + urlParam + "...");
-        } catch (IOException ioe) {
-            System.err.println("Failed to get build view \n" + ioe);
-            return Responses.somethingWentWrong();
-        }
-        
-        return newFixedLengthResponse(response);
+        return getView("build", x -> x.replaceAll("<ya-ci:BUILD_MSG>", "Project is being built from " + urlParam + "..."));
     }
     
-    private String createBuildTable() throws IOException {
+    private Response getView(String viewName, Function<String, String> replaceFunction) {
+        try {
+            return newFixedLengthResponse(replaceFunction.apply(Views.get(viewName)));
+        } catch (IOException ioe) {
+            System.err.println("Failed to load view " + viewName + "\n");
+            return Responses.somethingWentWrong();
+        }
+    }
+    
+    private String createBuildTable() {
         final StringBuilder s = new StringBuilder("<h2>Builds</h2><table>");
         
+        try {
         s.append(Files.find(Paths.get(BUILD_PATH), 1, (path, attributes) -> attributes.isDirectory())
                 .filter(x -> !x.endsWith(Paths.get(BUILD_PATH)))
                 .collect(Collector.of(
@@ -101,11 +138,15 @@ public class WebServer extends AbstractServer {
                             .append(x.getFileName().toString())
                             .append("</td><td>")
                             .append(new SimpleDateFormat("dd.MM.yyyy H:mm").format(new Date(x.toFile().lastModified())))
-                            .append("</td><td><a href='")
-                            .append(x.toUri().toString())
+                            .append("</td><td><a href='/download?file=")
+                            .append(x.getFileName().toString())
                             .append("'>Download</a></td></tr>"),
                         StringBuilder::append,
                         StringBuilder::toString)));
+        } catch (IOException ioe) {
+            System.err.println(ioe);
+            return "";
+        }
                 
         return s.append("</table>").toString();
     }
