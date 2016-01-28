@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 
@@ -43,10 +44,9 @@ public class Gitter implements FileProcesser {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        try (Git repo = Git.cloneRepository().setURI(p).setDirectory(folder.toFile()).call()) {
-            if(config.gitBranch != null) {
-                repo.checkout().setName(config.gitBranch).call();
-            }
+        CloneCommand c = Git.cloneRepository().setURI(p).setDirectory(folder.toFile());
+        config.gitBranch.ifPresent(c::setBranch);
+        try (Git repo = c.call()) {
             repo.close();
             repo.getRepository().close();
             return folder;
