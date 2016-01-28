@@ -31,11 +31,12 @@ import java.io.InputStreamReader;
  */
 public class Views {
     
-    private static final String VIEWS_PATH = "/views/";
+    private static final String VIEWS_PATH = "resources/views/";
         
     public static String get(String viewName) throws IOException {
         StringBuilder sb = new StringBuilder();
         InputStream res = YACI.class.getResourceAsStream(VIEWS_PATH + viewName);
+        if (res == null) throw new NullPointerException();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(res))) {
             String line;
             while ((line = reader.readLine()) != null) {

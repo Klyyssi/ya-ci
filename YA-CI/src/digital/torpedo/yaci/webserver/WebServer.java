@@ -119,8 +119,8 @@ public class WebServer extends AbstractServer {
     private Response getView(String viewName, Function<String, String> replaceFunction) {
         try {
             return newFixedLengthResponse(replaceFunction.apply(Views.get(viewName)));
-        } catch (IOException ioe) {
-            System.err.println("Failed to load view " + viewName + "\n");
+        } catch (NullPointerException|IOException ioe) {
+            System.err.println("Failed to load view " + viewName + "\n" +ioe);
             return Responses.somethingWentWrong();
         }
     }
