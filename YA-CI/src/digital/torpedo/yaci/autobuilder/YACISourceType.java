@@ -21,6 +21,7 @@ package digital.torpedo.yaci.autobuilder;
 
 import digital.torpedo.yaci.autobuilder.fileprocessers.Gitter;
 import digital.torpedo.yaci.autobuilder.fileprocessers.Unzipper;
+import digital.torpedo.yaci.autobuilder.fileprocessers.UnzipperHttp;
 import java.util.Optional;
 
 /**
@@ -31,7 +32,7 @@ public enum YACISourceType {
     /** Zip Container, uses Local Path */
     ZIP(new Unzipper()),
     /** Zip over HTTP */
-    HTTP_ZIP(null),
+    HTTP_ZIP(new UnzipperHttp()),
     /** Git from remote */
     GIT(new Gitter());
     
