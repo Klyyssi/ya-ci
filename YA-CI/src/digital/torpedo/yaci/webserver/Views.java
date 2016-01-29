@@ -1,5 +1,5 @@
 /**
- *  Very simple uri-to-handler mapping mechanism
+ *  View manager
  *  
  *  Copyright (C) 2016  Tuomo Heino, Markus Mulkahainen
  *
@@ -17,40 +17,32 @@
  *  along with this program; if not, you can access it online at
  *  http://www.gnu.org/licenses/gpl-2.0.html.
  */
-
 package digital.torpedo.yaci.webserver;
 
-import fi.iki.elonen.NanoHTTPD;
-
+import digital.torpedo.yaci.YACI;
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.util.Map;
-import java.util.function.*;
-import java.util.HashMap;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 /**
+ *
  * @author Markus Mulkahainen
  */
-public class AbstractServer extends NanoHTTPD {
+public class Views {
     
-    private final Map<String, Function<IHTTPSession, Response>> uriToHandler = new HashMap<>();
-
-    public AbstractServer(int port) throws IOException {
-        super(port);
-        start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);        
-    }
-    
-    public void addMapping(String route, Function<IHTTPSession, Response> handler) {
-        uriToHandler.put(route, handler);
-    }
-    
-    @Override
-    public Response serve(IHTTPSession session) {
-        Function<IHTTPSession, Response> handler = uriToHandler.get(session.getUri().substring(1));
+    private static final String VIEWS_PATH = "resources/views/";
         
-        if (handler == null) {     
-            return Responses.error404();
+    public static String get(String viewName) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        InputStream res = YACI.class.getResourceAsStream(VIEWS_PATH + viewName);
+        if (res == null) throw new NullPointerException();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(res))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
         }
-        
-        return handler.apply(session);
+        return sb.toString();
     }
 }

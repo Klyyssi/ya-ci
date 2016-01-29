@@ -5,7 +5,10 @@
   <version>0.0.1-SNAPSHOT</version>
   <build>
     <sourceDirectory>src</sourceDirectory>
-	<resources>
+    <resources>
+	    <resource>
+		    <directory>src/digital/torpedo/yaci/resources</directory>
+	    </resource>
 		<resource>
 			<directory>src</directory>
 			<excludes>
